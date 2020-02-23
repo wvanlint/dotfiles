@@ -1,0 +1,6 @@
+alias tmux="tmux -2"
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  alias gls="gls --color=auto"
+  alias ggrep="ggrep --color=auto"
+fi

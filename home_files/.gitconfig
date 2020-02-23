@@ -1,0 +1,6 @@
+[user]
+  name = Willem Van Lint
+  email = willem@vanlint.info
+
+[include]
+  path = .gitconfig.local
