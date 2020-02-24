@@ -1,17 +1,19 @@
+# Completions
+autoload -Uz compinit
+compinit
+
 # Options
 setopt hist_save_no_dups
 setopt no_beep
 setopt prompt_subst
 setopt share_history
 
+unset zle_bracketed_paste
+
 # History
 HISTFILE=~/.histfile
 HISTSIZE=10000
 SAVEHIST=10000
-
-# Completions
-autoload -Uz compinit
-compinit
 
 # Keybindings
 bindkey -v
