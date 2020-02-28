@@ -5,8 +5,8 @@ set nocompatible
 
 set backspace=indent,eol,start
 set hlsearch
-set list
-set listchars=tab:>_,trail:~
+set nolist
+set listchars=tab:▸·,trail:·
 set noerrorbells visualbell t_vb=
 set nofixendofline
 set ruler
@@ -34,12 +34,28 @@ autocmd FileType markdown setlocal textwidth=0
 autocmd Filetype {html,css} setlocal tabstop=2 shiftwidth=2 expandtab
 autocmd Filetype make setlocal shiftwidth=8 tabstop=8 noexpandtab
 autocmd Filetype go setlocal shiftwidth=2 tabstop=2 noexpandtab
+function! GoFmt(f)
+  let v = winsaveview()
+  execute 'silent ! gofmt -w ' . a:f
+  redraw!
+  edit
+  call winrestview(v)
+endfunction
+augroup GoFmt
+autocmd Filetype go autocmd! BufWritePost <buffer> call GoFmt(@%)
+augroup END
 
 " No automatic comment leaders
 autocmd FileType * setlocal formatoptions-=c formatoptions-=r formatoptions-=o
 
 " Remove trailing whitespace
-autocmd BufWritePre * %s/\s\+$//e
+function! DelTrailingWhitespace()
+  let l = line(".")
+  let c = col(".")
+  %s/\s\+$//e
+  call cursor(l, c)
+endfunction
+autocmd BufWritePre * :call DelTrailingWhitespace()
 
 " Bindings
 let mapleader = " "
@@ -47,7 +63,7 @@ let mapleader = " "
 function! SearchProject()
   let search = input('Search: ')
   let temp = tempname()
-  execute 'silent ! rg --color=always --no-heading ' . search .  ' | fzf --ansi -d : -n 1 --preview ''bat --color=always $(echo {} | cut -d: -f1) | rg --color=always --colors "match:fg:white" --colors "match:bg:red" -C 5 ' . search . ' '' | cut -d: -f1 > ' . temp
+  execute 'silent ! rg --color=always --no-heading "' . search .  '" | fzf --ansi -d : -n 1 --preview ''bat --color=always $(echo {} | cut -d: -f1) | rg --color=always --colors "match:fg:white" --colors "match:bg:red" -C 5 ' . search . ' '' | cut -d: -f1 > ' . temp
   redraw!
   try
     let out = filereadable(temp) ? readfile(temp) : []
@@ -63,7 +79,7 @@ nnoremap <silent> <Leader>f :call SearchProject()<CR>
 
 function! FuzzyFind()
   let temp = tempname()
-  execute 'silent ! fzf --preview ''bat {}'' > ' . temp
+  execute 'silent ! fzf --preview ''bat --color=always {}'' > ' . temp
   redraw!
   try
     let out = filereadable(temp) ? readfile(temp) : []
