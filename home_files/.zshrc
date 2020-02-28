@@ -21,7 +21,7 @@ bindkey -vrp '^['
 bindkey -v '^?' backward-delete-char
 
 fzf-history-widget() {
-  local selected=$(fc -rln 1 | fzf --query=$BUFFER)
+  local selected=$(fc -rln 1 | fzf --query=$BUFFER --height=50% --reverse --tiebreak=index)
   BUFFER=$selected
   zle reset-prompt
   return $ret
