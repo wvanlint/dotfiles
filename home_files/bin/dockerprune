@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+docker ps -q | xargs docker stop;
+docker system prune -a --volumes -f;

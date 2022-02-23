@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+
+import sys
+import re
+
+for line in sys.stdin:
+    last = 0
+    for m in re.finditer("#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})", line):
+        print(line[last:m.start()], end='')
+        print('\x1b[38;2;{};{};{}m{}\x1b[0m'.format(int(m.group(1), 16), int(m.group(2), 16), int(m.group(3), 16), m.group(0)), end='')
+        last = m.end()
+    print(line[last:], end='')
+

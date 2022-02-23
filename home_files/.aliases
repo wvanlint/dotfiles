@@ -1,0 +1,11 @@
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  if hash gls 2> /dev/null; then
+    alias ls="gls --color=auto"
+  fi
+  if hash ggrep 2> /dev/null; then
+    alias grep="ggrep --color=auto"
+  fi
+fi
+
+# Anonymize timezones.
+alias git='GIT_AUTHOR_DATE=$(date +"%Y-%m-%dT00:00:00Z") GIT_COMMITTER_DATE=$(date +"%Y-%m-%dT00:00:00Z") git'
