@@ -1,0 +1,8 @@
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  if hash gls 2> /dev/null; then
+    alias ls="gls --color=auto"
+  fi
+  if hash ggrep 2> /dev/null; then
+    alias grep="ggrep --color=auto"
+  fi
+fi

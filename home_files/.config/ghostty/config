@@ -1,0 +1,26 @@
+font-family = "Fira Code"
+font-size = 14
+
+cursor-style = block
+
+palette = 0=#2f2f2f
+palette = 1=#cc9393
+palette = 2=#7f9f7f
+palette = 3=#efefaf
+palette = 4=#8c8cbc
+palette = 5=#bc8cbc
+palette = 6=#8cd0d3
+palette = 7=#dcdccc
+palette = 8=#2f2f2f
+palette = 9=#cc9393
+palette = 10=#7f9f7f
+palette = 11=#efefaf
+palette = 12=#8c8cbc
+palette = 13=#bc8cbc
+palette = 14=#8cd0d3
+palette = 15=#dcdccc
+background = #3f3f3f
+foreground = #dcdccc
+
+confirm-close-surface = false
+quit-after-last-window-closed = true

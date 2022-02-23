@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+
+import argparse
+import secrets
+import sys
+import os
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'n',
+        type=int,
+        nargs='?',
+        default=1,
+        help='Number of words',
+    )
+    parser.add_argument(
+        '--vocab',
+        default='/usr/share/dict/words',
+        help='Vocabulary file',
+    )
+    parser.add_argument(
+        '--freq',
+        default=os.path.join(os.path.dirname(__file__), 'count_1w.txt'),
+        help='Frequency file',
+    )
+    parser.add_argument(
+        '--top_n_freq',
+        type=int,
+        default=10000,
+        help='Top N frequency cutoff',
+    )
+    args = parser.parse_args()
+
+    vocab = set()
+    with open(args.vocab) as f:
+        for line in f:
+            vocab.add(line.strip())
+    words = []
+    with open(args.freq) as f:
+        i = 0
+        for line in f:
+            parts = line.split()
+            if parts[0] in vocab:
+                words.append(parts[0])
+                i = i + 1
+            if i >= args.top_n_freq:
+                break
+
+    result = []
+    for i in range(args.n):
+        result.append(words[secrets.randbelow(len(words))])
+    print(' '.join(result))
