@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+
+# Describe the interface and report failures consistently.
+usage() {
+  cat <<'HELP'
+Usage:
+  tmux-dev-session wt REPOSITORY [-b | --detach] NAME [COMMIT]
+                   [--no-attach] [--no-fetch]
+  tmux-dev-session dir DIRECTORY NAME [--no-attach]
+
+Worktree arguments match wt (see wt --help). The destination is always
+MAIN_REPO/.worktrees/NAME. --detach/-d means detached Git HEAD.
+--no-attach creates/reuses tmux without attaching or switching clients.
+NAME is required and is used verbatim as the tmux session name in both modes.
+wt also passes NAME to wt as the worktree name.
+dir uses an existing directory without changing Git state.
+
+Layout: editor left, agent upper-right, cli lower-right, all as shells.
+Matching sessions retain their layout. Closing tmux does not remove Git work.
+HELP
+}
+die() { printf 'tmux-dev-session: %s\n' "$*" >&2; exit 1; }
+
+
+# Parse the mode, location, positional name and supported options.
+[[ ${1:-} != --help && ${1:-} != -h ]] || { usage; exit 0; }
+[[ $# -ge 3 ]] || { usage >&2; exit 2; }
+mode=$1
+location=$2
+shift 2
+[[ $mode == wt || $mode == dir ]] || die "Unknown mode '$mode'; use wt or dir"
+no_attach=false
+wt_options=()
+positional=()
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --no-attach) no_attach=true; shift ;;
+    -b|--detach|-d|--no-fetch)
+      [[ $mode == wt ]] || die "Option '$1' is only supported in wt mode"
+      wt_options+=("$1"); shift ;;
+    --) shift; positional+=("$@"); break ;;
+    -*) die "Unsupported option: $1" ;;
+    *) positional+=("$1"); shift ;;
+  esac
+done
+if [[ $mode == wt ]]; then
+  [[ ${#positional[@]} -ge 1 && ${#positional[@]} -le 2 ]] || die 'Expected wt REPOSITORY NAME [COMMIT]'
+else
+  [[ ${#positional[@]} == 1 ]] || die 'Expected dir DIRECTORY NAME'
+fi
+
+
+# Validate the positional name before any worktree or session changes.
+session_name=${positional[0]}
+[[ $session_name =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]] || die 'NAME must use letters, digits, hyphens and underscores, starting with a letter or digit'
+
+
+# Resolve an existing directory or preview the worktree destination.
+command -v tmux >/dev/null || die 'tmux is required'
+if [[ $mode == dir ]]; then
+  [[ -d $location ]] || die "Directory does not exist: $location"
+  directory=$(cd "$location" && pwd -P)
+else
+  command -v wt >/dev/null || die 'wt is required on PATH'
+  wt_args=("${wt_options[@]}" -- "${positional[@]}")
+  directory=$(wt "$location" --path "${wt_args[@]}")
+fi
+
+
+# Reuse matching sessions; retain the legacy metadata key for existing sessions.
+exists=false
+if tmux has-session -t "=$session_name" 2>/dev/null; then
+  exists=true
+  recorded=$(tmux show-options -qv -t "=$session_name:" @agent-session-directory)
+  [[ $recorded == "$directory" ]] || die "Session '$session_name' belongs to another directory or was not created by tmux-dev-session; choose a different NAME"
+fi
+
+
+# Delegate worktree creation and validation to wt after checking session conflicts.
+if [[ $mode == wt ]]; then
+  [[ $exists == false || -d $directory ]] || die 'Existing session worktree is missing'
+  directory=$(wt "$location" "${wt_args[@]}")
+fi
+
+
+# Create the three-pane layout; clean up only the new session if setup fails.
+if [[ $exists == false ]]; then
+  editor=$(tmux new-session -d -P -F '#{pane_id}' -s "$session_name" -n work -x 160 -y 48 -c "$directory")
+  trap 'tmux kill-session -t "=$session_name" 2>/dev/null || true' ERR
+  agent=$(tmux split-window -h -P -F '#{pane_id}' -t "$editor" -c "$directory")
+  cli=$(tmux split-window -v -P -F '#{pane_id}' -t "$agent" -c "$directory")
+  tmux select-pane -t "$editor" -T editor
+  tmux select-pane -t "$agent" -T agent
+  tmux select-pane -t "$cli" -T cli
+  tmux select-pane -t "$editor"
+  tmux set-option -t "=$session_name:" @agent-session-directory "$directory"
+  trap - ERR
+fi
+
+
+# Print the destination, switch the current client or attach from outside tmux.
+if [[ $no_attach == true ]]; then
+  printf '%s: %s\n' "$session_name" "$directory"
+elif [[ -n ${TMUX:-} ]]; then
+  exec tmux switch-client -t "=$session_name"
+else
+  exec tmux attach-session -t "=$session_name"
+fi

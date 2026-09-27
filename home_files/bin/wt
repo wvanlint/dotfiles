@@ -1,33 +1,172 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-NAME="${1:-}"
-BASE="${2:-main}"
+# Describe the command and report failures consistently.
+usage() {
+  cat <<'HELP'
+Usage: wt REPOSITORY [-b | --detach] [--no-fetch] [--path] NAME [COMMIT]
 
-if [[ -z "$NAME" ]]; then
-  echo "Usage: $(basename "$0") <name> [base-ref]" >&2
-  exit 2
-fi
+Create/reuse MAIN_REPO/.worktrees/NAME, even from a linked worktree.
+REPOSITORY must be a local repository path. NAME is a single directory name.
 
-ROOT="$(git rev-parse --show-toplevel)"
-WT_DIR="$ROOT/.worktrees"
-PATH_DIR="$WT_DIR/$NAME"
+-b           Create branch NAME, starting at COMMIT (default: origin/main).
+--detach, -d Create a detached HEAD at COMMIT (default: origin/main).
+Without either option, COMMIT selects an existing local branch or commit.
+Without COMMIT, use a detached HEAD at origin/main.
+--no-fetch   Use cached refs without contacting any remote.
+--path       Check the destination without fetching or creating anything;
+             commit validation is deferred until an actual invocation.
 
-mkdir -p "$WT_DIR"
+Remote refs such as origin/main or refs/remotes/upstream/topic are fetched
+before use. Local branches, tags and commit IDs do not trigger a fetch.
+Only the absolute path is printed to stdout. No worktree is reset.
+Matching existing worktrees are reused, including with -b; their branches
+are not reset to COMMIT. Detached reuse requires the same commit.
+Existing refs are resolved by Git; ambiguous names require a full ref.
+Uncached remote refs must include a configured remote name.
+Other git-worktree flags are not supported.
+HELP
+}
+die() { printf 'wt: %s\n' "$*" >&2; exit 1; }
 
-if [[ -e "$PATH_DIR" ]]; then
-  if git -C "$ROOT" worktree list --porcelain | grep -F -x "worktree $PATH_DIR" >/dev/null; then
-    pushd "$PATH_DIR"
-    exit 0
+# Parse the repository, worktree options and positional arguments.
+[[ ${1:-} != --help && ${1:-} != -h ]] || { usage; exit 0; }
+[[ $# -ge 2 ]] || { usage >&2; exit 2; }
+repo=$(cd "$1" && pwd -P) || die "Repository directory does not exist: $1"
+shift
+git -C "$repo" rev-parse --git-dir >/dev/null || die "Not a Git repository: $repo"
+branch=
+create=false
+detached=false
+path_only=false
+fetch=true
+positional=()
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -b) create=true; shift ;;
+    --detach|-d) detached=true; shift ;;
+    --path) path_only=true; shift ;;
+    --no-fetch) fetch=false; shift ;;
+    --) shift; positional+=("$@"); break ;;
+    -*) die "Unsupported option: $1" ;;
+    *) positional+=("$1"); shift ;;
+  esac
+done
+[[ ${#positional[@]} -ge 1 && ${#positional[@]} -le 2 ]] || die 'Expected NAME [COMMIT]'
+[[ $create == false || $detached == false ]] || die '-b and --detach cannot be combined'
+name=${positional[0]}
+[[ $name =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]*$ && $name != *..* ]] || die 'NAME must be a single directory name using letters, digits, dots, hyphens or underscores, starting with a letter or digit'
+
+# Keep all task directories under the main checkout, even from linked worktrees.
+root=
+while IFS= read -r -d '' field; do
+  if [[ -z $root && $field == worktree\ * ]]; then root=${field#worktree }; fi
+done < <(git -C "$repo" worktree list --porcelain -z)
+[[ -d $root && $(git -C "$root" rev-parse --is-bare-repository) == false ]] || die 'A non-bare main checkout is required'
+root=$(cd "$root" && pwd -P)
+directory="$root/.worktrees/$name"
+
+# Ask Git to resolve existing refs before considering an uncached remote name.
+commit=${positional[1]:-refs/remotes/origin/main}
+base_ref=${commit%%[~^]*}
+revision_suffix=${commit#"$base_ref"}
+resolved_ref=
+remote_ref=
+if resolved_ref=$(git -C "$repo" rev-parse --symbolic-full-name --verify --end-of-options "$base_ref" 2>&1); then
+  # Git can report an ambiguous name with a successful exit status.
+  [[ $resolved_ref != *$'\n'* ]] || die "Cannot resolve '$base_ref' unambiguously; use a full ref such as refs/heads/main or refs/remotes/origin/main"
+  case $resolved_ref in
+    refs/remotes/*) remote_ref=${resolved_ref#refs/remotes/} ;;
+  esac
+  if [[ $resolved_ref == refs/* && $base_ref != HEAD && $base_ref != @ ]]; then
+    commit="$resolved_ref$revision_suffix"
   fi
-  echo "Error: $PATH_DIR already exists (and doesn't look like a worktree)." >&2
-  exit 1
-fi
-
-if git rev-parse -q --verify "$NAME^{commit}" >/dev/null; then
-  git -C "$ROOT" worktree add "$PATH_DIR" "$NAME"
 else
-  git -C "$ROOT" worktree add -b "$NAME" "$PATH_DIR" "$BASE"
+  resolved_ref=
+  remote_ref=${base_ref#refs/remotes/}
+  remote_ref=${remote_ref#remotes/}
 fi
 
-pushd "$PATH_DIR"
+# Map remote-tracking refs or unresolved remote names to a configured remote.
+remote_name=
+remote_branch=
+if [[ -n $remote_ref ]]; then
+  while IFS= read -r configured_remote; do
+    if [[ $remote_ref == "$configured_remote/"* && ${#configured_remote} -gt ${#remote_name} ]]; then
+      remote_name=$configured_remote
+      remote_branch=${remote_ref#"$configured_remote/"}
+    fi
+  done < <(git -C "$repo" remote)
+  if [[ -n $remote_name ]]; then
+    canonical_ref="refs/remotes/$remote_name/$remote_branch"
+    git check-ref-format "refs/heads/$remote_branch" >/dev/null || die "Invalid remote branch: $base_ref"
+    commit="$canonical_ref$revision_suffix"
+  fi
+fi
+
+# Select a new branch, a resolved local branch or a detached commit.
+if [[ $create == true ]]; then
+  branch=$name
+elif [[ $detached == false ]]; then
+  if [[ $resolved_ref == refs/heads/* && -z $revision_suffix && $base_ref != HEAD && $base_ref != @ ]]; then
+    branch=${resolved_ref#refs/heads/}
+  else
+    detached=true
+  fi
+fi
+if [[ -n $branch ]]; then
+  [[ $branch != -* && $branch != HEAD ]] || die "Invalid branch name: $branch"
+  git check-ref-format "refs/heads/$branch" >/dev/null || die "Invalid branch name: $branch"
+fi
+
+# Identify registered destinations and branches already checked out elsewhere.
+registered=false
+occupied=false
+while IFS= read -r -d '' field; do
+  if [[ $field == "worktree $directory" ]]; then registered=true; fi
+  if [[ -n $branch && $field == "branch refs/heads/$branch" ]]; then occupied=true; fi
+done < <(git -C "$repo" worktree list --porcelain -z)
+
+# Refresh only the requested remote branch; a failed fetch stops the operation.
+if [[ $fetch == true && $path_only == false && -n $remote_name ]]; then
+  git -C "$repo" fetch --no-tags "$remote_name" "+refs/heads/$remote_branch:refs/remotes/$remote_name/$remote_branch" >&2
+fi
+
+# Reuse only matching worktrees, without changing their branch or commit.
+if [[ -e $directory || -L $directory ]]; then
+  [[ $registered == true ]] || die "Path exists but is not a registered worktree: $directory"
+  actual=$(git -C "$directory" symbolic-ref --quiet HEAD || true)
+  if [[ $detached == true ]]; then
+    [[ -z $actual ]] || die "Expected detached HEAD, found $actual"
+    if [[ $path_only == false ]]; then
+      oid=$(git -C "$repo" rev-parse --verify --end-of-options "$commit^{commit}") || die "Invalid commit: $commit"
+      [[ $(git -C "$directory" rev-parse HEAD) == "$oid" ]] || die 'Detached worktree is at a different commit'
+    fi
+  else
+    [[ $actual == "refs/heads/$branch" ]] || die "Worktree is not on branch '$branch': $directory"
+  fi
+else
+  # Validate a new destination before asking Git to create the worktree.
+  [[ $registered == false ]] || die 'Worktree is registered but missing; repair or prune it explicitly'
+  [[ $occupied == false ]] || die "Branch '$branch' is already checked out in another worktree"
+  if [[ $create == true ]]; then
+    if git -C "$repo" show-ref --verify --quiet "refs/heads/$branch"; then die "Branch '$branch' already exists; omit -b to use it"; fi
+  fi
+  if [[ $path_only == false && ( $create == true || $detached == true ) ]]; then
+    git -C "$repo" rev-parse --verify --end-of-options "$commit^{commit}" >/dev/null || die "Invalid commit: $commit"
+  fi
+
+  # Send Git progress to stderr so stdout remains usable in command substitution.
+  if [[ $path_only == false ]]; then
+    if [[ $create == true ]]; then
+      git -C "$repo" worktree add -b "$branch" -- "$directory" "$commit" >&2
+    elif [[ $detached == true ]]; then
+      git -C "$repo" worktree add --detach -- "$directory" "$commit" >&2
+    else
+      git -C "$repo" worktree add -- "$directory" "$branch" >&2
+    fi
+  fi
+fi
+
+# Return the absolute destination for callers such as tmux-dev-session.
+printf '%s\n' "$directory"

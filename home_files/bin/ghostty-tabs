@@ -1,0 +1,93 @@
+#!/usr/bin/osascript
+
+-- Describe the launcher and parse its optional preview flag.
+on run arguments
+    -- Finder applets may supply an application object rather than CLI arguments.
+    try
+        if class of arguments is not list then set arguments to {}
+    on error
+        set arguments to {}
+    end try
+    set dryRun to false
+    if arguments is {"--help"} or arguments is {"-h"} then
+        return "Usage: ghostty-tabs [--dry-run]" & linefeed & "Creates a new Ghostty window with a Local shell tab and one SSH tab per host in ~/.ghostty_remotes." & linefeed & "Blank lines and lines beginning with # are ignored." & linefeed & "--dry-run prints the tab commands without opening Ghostty or connecting."
+    else if arguments is {"--dry-run"} then
+        set dryRun to true
+    else if (count arguments) is not 0 then
+        error "Usage: ghostty-tabs [--dry-run]"
+    end if
+
+
+    -- Read the optional UTF-8 host list.
+    set homeDirectory to POSIX path of (path to home folder)
+    set remotesPath to homeDirectory & ".ghostty_remotes"
+    set remoteContents to ""
+    if (do shell script "if test -s " & quoted form of remotesPath & "; then printf yes; fi") is "yes" then
+        set remoteContents to read (POSIX file remotesPath) as «class utf8»
+    end if
+
+
+    -- Validate every host before creating tabs or starting SSH.
+    set remoteHosts to {}
+    repeat with remoteLine in paragraphs of remoteContents
+        set hostName to my trimWhitespace(remoteLine as text)
+        if hostName is not "" and hostName does not start with "#" then
+            if hostName starts with "-" then error "SSH hosts cannot begin with '-': " & hostName
+            repeat with hostCharacter in characters of hostName
+                if "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-@:%[]" does not contain (hostCharacter as text) then
+                    error "Invalid SSH host in " & remotesPath & ": " & hostName & ". Use one host alias or user@host per line; configure SSH options in ~/.ssh/config."
+                end if
+            end repeat
+            set end of remoteHosts to hostName
+        end if
+    end repeat
+
+
+    -- Build shell-quoted SSH commands and a preview of the tabs.
+    set remoteCommands to {}
+    set preview to "Local: default Ghostty shell"
+    repeat with remoteHost in remoteHosts
+        set hostName to remoteHost as text
+        set sshCommand to "/usr/bin/ssh -t " & quoted form of hostName
+        set end of remoteCommands to sshCommand
+        set preview to preview & linefeed & hostName & ": " & sshCommand
+    end repeat
+    if dryRun then return preview
+
+
+    -- Create a new window with the local tab and one tab per remote host.
+    tell application "Ghostty"
+        set localConfig to new surface configuration
+        set initial working directory of localConfig to homeDirectory
+        set workspaceWindow to new window with configuration localConfig
+        set localTab to selected tab of workspaceWindow
+        perform action "set_tab_title:Local" on focused terminal of localTab
+
+        repeat with tabIndex from 1 to count remoteHosts
+            set remoteConfig to new surface configuration
+            set initial working directory of remoteConfig to homeDirectory
+            set command of remoteConfig to item tabIndex of remoteCommands
+            set wait after command of remoteConfig to true
+            set remoteTab to new tab in workspaceWindow with configuration remoteConfig
+            perform action ("set_tab_title:" & item tabIndex of remoteHosts) on focused terminal of remoteTab
+        end repeat
+
+        select tab localTab
+        activate
+    end tell
+end run
+
+
+-- Trim whitespace so indented comments and CRLF host files work as expected.
+on trimWhitespace(value)
+    set whitespace to {space, tab, return, linefeed}
+    repeat while value is not "" and character 1 of value is in whitespace
+        if (count value) is 1 then return ""
+        set value to text 2 thru -1 of value
+    end repeat
+    repeat while value is not "" and character -1 of value is in whitespace
+        if (count value) is 1 then return ""
+        set value to text 1 thru -2 of value
+    end repeat
+    return value
+end trimWhitespace

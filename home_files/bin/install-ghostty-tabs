@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+
+# Describe the installer and accept an optional application destination.
+usage() {
+  cat <<'HELP'
+Usage: install-ghostty-tabs [APP_PATH]
+
+Compile the neighboring ghostty-tabs AppleScript into a clickable macOS app.
+Defaults to ~/Applications/GhosttyTabs.app. Re-run after editing ghostty-tabs.
+Changes to ~/.ghostty_remotes do not require recompiling.
+The application is installed without being launched.
+HELP
+}
+if [[ ${1:-} == --help || ${1:-} == -h ]]; then
+  usage
+  exit 0
+fi
+[[ $# -le 1 ]] || { usage >&2; exit 2; }
+[[ $(uname -s) == Darwin ]] || { printf 'This installer requires macOS.\n' >&2; exit 1; }
+app_path=${1:-"$HOME/Applications/GhosttyTabs.app"}
+[[ $app_path == *.app ]] || { printf 'Destination must end in .app\n' >&2; exit 2; }
+
+
+# Resolve symlinks so invocation through ~/bin finds the dotfiles source.
+script_path=${BASH_SOURCE[0]}
+while [[ -L $script_path ]]; do
+  script_dir=$(cd "$(dirname "$script_path")" && pwd -P)
+  script_path=$(readlink "$script_path")
+  [[ $script_path == /* ]] || script_path="$script_dir/$script_path"
+done
+script_dir=$(cd "$(dirname "$script_path")" && pwd -P)
+source_path="$script_dir/ghostty-tabs"
+[[ -f $source_path ]] || { printf 'Missing AppleScript: %s\n' "$source_path" >&2; exit 1; }
+
+
+# Compile or update the app bundle without opening Ghostty or starting SSH.
+mkdir -p "$(dirname "$app_path")"
+/usr/bin/osacompile -o "$app_path" "$source_path"
+printf 'Installed %s\n' "$app_path"
