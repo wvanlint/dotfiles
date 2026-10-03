@@ -25,9 +25,30 @@ HISTSIZE=10000
 SAVEHIST=10000
 
 # Keybindings
+KEYTIMEOUT=1
 bindkey -v
 bindkey -vrp '^['
 bindkey -v '^?' backward-delete-char
+# Kitty Keyboard Protocol / fixterms Ctrl+[ encoding
+bindkey -M viins '^[[91;5u' vi-cmd-mode
+bindkey -M vicmd '^[[91;5u' vi-cmd-mode
+
+# Mode-aware cursor
+if [[ -n $TMUX || -n $HERDR_PANE_ID ]]; then
+  autoload -Uz add-zle-hook-widget
+  vi-mode-cursor() {
+    case $KEYMAP in
+      vicmd) printf '\e[2 q' ;;
+      *) printf '\e[6 q' ;;
+    esac
+  }
+  reset-vi-mode-cursor() {
+    printf '\e[0 q'
+  }
+  add-zle-hook-widget line-init vi-mode-cursor
+  add-zle-hook-widget keymap-select vi-mode-cursor
+  add-zle-hook-widget line-finish reset-vi-mode-cursor
+fi
 
 fzf-history-widget() {
   local selected=$(fc -rln 1 | fzf --query=$BUFFER --height=30% --reverse --tiebreak=index)
@@ -78,10 +99,4 @@ fi
 # A local .rc outside of version control
 if [[ -f ~/.zshrc.local ]]; then
   . ~/.zshrc.local
-fi
-
-# If the shell is started outside of a tmux session,
-# attach to an existing tmux session or start a new one.
-if which tmux >/dev/null 2>&1 && [[ -z $TMUX ]]; then
-  tmux attach || tmux new-session
 fi

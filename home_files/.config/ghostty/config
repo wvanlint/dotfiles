@@ -3,6 +3,9 @@ font-size = 14
 
 cursor-style = block
 
+# Send Ctrl+[ as Escape for vi-mode applications.
+keybind = ctrl+left_bracket=text:\x1b
+
 palette = 0=#2f2f2f
 palette = 1=#cc9393
 palette = 2=#7f9f7f
