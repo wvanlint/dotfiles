@@ -29,9 +29,6 @@ KEYTIMEOUT=1
 bindkey -v
 bindkey -vrp '^['
 bindkey -v '^?' backward-delete-char
-# Kitty Keyboard Protocol / fixterms Ctrl+[ encoding
-bindkey -M viins '^[[91;5u' vi-cmd-mode
-bindkey -M vicmd '^[[91;5u' vi-cmd-mode
 
 # Mode-aware cursor
 if [[ -n $TMUX || -n $HERDR_PANE_ID ]]; then
