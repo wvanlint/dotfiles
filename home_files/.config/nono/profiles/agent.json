@@ -1,0 +1,120 @@
+{
+  "extends": "default",
+  "meta": {
+    "name": "agent"
+  },
+  "groups": {
+    "exclude": [
+      "dangerous_commands",
+      "dangerous_commands_macos",
+      "dangerous_commands_linux"
+    ],
+    "include": [
+      "bun_runtime",
+      "git_config",
+      "go_runtime",
+      "java_runtime",
+      "node_runtime",
+      "python_runtime",
+      "rust_runtime",
+      "user_tools",
+      {
+        "name": "go_runtime_macos",
+        "when": "macos"
+      },
+      {
+        "name": "go_runtime_linux",
+        "when": "linux"
+      },
+      {
+        "name": "homebrew_macos",
+        "when": "macos"
+      },
+      {
+        "name": "homebrew_linux",
+        "when": "linux"
+      },
+      {
+        "name": "user_caches_macos",
+        "when": "macos"
+      },
+      {
+        "name": "user_caches_linux",
+        "when": "linux"
+      }
+    ]
+  },
+  "security": {
+    "capability_elevation": false,
+    "signal_mode": "isolated"
+  },
+  "workdir": {
+    "access": "readwrite"
+  },
+  "filesystem": {
+    "allow": [
+      "~/.agents",
+      "~/.config",
+      "~/.npm",
+      "~/.pi",
+      "~/.vim",
+      "~/bin",
+      "~/dev"
+    ],
+    "deny": [
+      "~/docs"
+    ],
+    "bypass_protection": [
+      "~/.bunfig.toml",
+      "~/.config/bun/bunfig.toml",
+      "~/.npmrc",
+      "~/.zprofile",
+      "~/.zshenv",
+      "~/.zshrc"
+    ],
+    "allow_file": [
+      "~/.aliases",
+      "~/.bunfig.toml",
+      "~/.npmrc",
+      "~/.gitconfig",
+      "~/.inputrc",
+      "~/.ripgreprc",
+      "~/.tmux.conf",
+      "~/.vimrc",
+      "~/.zprofile",
+      "~/.zshenv",
+      "~/.zshrc"
+    ]
+  },
+  "network": {
+    "block": false,
+    "credentials": [
+      "github"
+    ],
+    "custom_credentials": {
+      "github": {
+        "upstream": "https://api.github.com",
+        "credential_key": "cmd://github",
+        "env_var": "GH_TOKEN",
+        "inject_header": "Authorization",
+        "credential_format": "token {}"
+      }
+    }
+  },
+  "credential_capture": {
+    "github": {
+      "command": [
+        "gh",
+        "auth",
+        "token",
+        "--hostname",
+        "github.com"
+      ],
+      "timeout_secs": 5,
+      "cache_ttl_secs": 900
+    }
+  },
+  "unsafe_macos_seatbelt_rules": [
+    "(allow user-preference-read)"
+  ]
+}

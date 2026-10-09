@@ -7,5 +7,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   fi
 fi
 
+alias pix='pi-sandbox'
+
 # Anonymize timezones.
 alias git='GIT_AUTHOR_DATE=$(date +"%Y-%m-%dT00:00:00Z") GIT_COMMITTER_DATE=$(date +"%Y-%m-%dT00:00:00Z") git'

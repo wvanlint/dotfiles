@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+command -v nono >/dev/null || { echo 'pi-sandbox: install nono with brew install nono' >&2; exit 127; }
+command -v pi >/dev/null || { echo 'pi-sandbox: pi is not on PATH' >&2; exit 127; }
+
+profile="${XDG_CONFIG_HOME:-$HOME/.config}/nono/profiles/agent.json"
+[[ -r "$profile" ]] || { echo "pi-sandbox: missing policy: $profile" >&2; exit 1; }
+
+exec nono run --profile agent --allow-cwd --silent --startup-timeout 0 -- pi "$@"
