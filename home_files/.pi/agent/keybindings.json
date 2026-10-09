@@ -1,0 +1,33 @@
+{
+  "app.message.copy": [],
+  "app.message.followUp": "ctrl+enter",
+
+  "app.model.select": [],
+  "app.models.clearAll": [],
+
+  "app.tree.filter.labeledOnly": [],
+  "app.tree.filter.userOnly": [],
+  "app.tree.foldOrUp": ["ctrl+left", "alt+left", "ctrl+h"],
+  "app.tree.unfoldOrDown": ["ctrl+right", "alt+right", "ctrl+l"],
+
+  "tui.editor.cursorDown": ["down", "ctrl+j"],
+  "tui.editor.cursorLeft": ["left", "ctrl+h"],
+  "tui.editor.cursorLineEnd": ["end", "ctrl+end", "ctrl+e", "ctrl+4"],
+  "tui.editor.cursorLineStart": ["home", "ctrl+home", "ctrl+a", "ctrl+0"],
+  "tui.editor.cursorRight": ["right", "ctrl+l"],
+  "tui.editor.cursorUp": ["up", "ctrl+k"],
+  "tui.editor.cursorWordLeft": ["alt+left", "ctrl+left", "alt+b", "ctrl+b"],
+  "tui.editor.cursorWordRight": ["alt+right", "ctrl+right", "alt+f", "ctrl+w"],
+  "tui.editor.deleteCharForward": ["delete", "ctrl+x"],
+  "tui.editor.deleteToLineEnd": "ctrl+d",
+  "tui.editor.deleteToLineStart": [],
+  "tui.editor.deleteWordBackward": ["alt+backspace", "shift+backspace", "ctrl+backspace"],
+  "tui.editor.jumpForward": ["ctrl+f"],
+  "tui.editor.jumpBackward": ["ctrl+shift+f"],
+  "tui.editor.undo": ["ctrl+-", "ctrl+u"],
+
+  "tui.input.newLine": "shift+enter",
+
+  "tui.select.down": ["down", "ctrl+j"],
+  "tui.select.up": ["up", "ctrl+k"]
+}
