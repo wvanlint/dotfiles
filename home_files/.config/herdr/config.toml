@@ -26,7 +26,6 @@ open_notification_target = "prefix+y"
 
 # Workspaces
 workspace_picker = "prefix+p"
-# Free Shift+N for previous-tab, matching tmux.
 new_workspace = "prefix+w"
 rename_workspace = "prefix+shift+w"
 close_workspace = "prefix+c"
@@ -37,17 +36,17 @@ switch_workspace = ""
 # Worktrees
 new_worktree = "prefix+g"
 open_worktree = "prefix+o"
-remove_worktree = "prefix+shift+r"
+remove_worktree = "prefix+shift+c"
 
 # Agents
-previous_agent = ""
-next_agent = ""
-focus_agent = "prefix+/"
+previous_agent = "prefix+shift+space"
+next_agent = "prefix+space"
+focus_agent = ""
 
 # Tabs
 new_tab = "prefix+t"
 rename_tab = "prefix+shift+t"
-close_tab = "prefix+shift+x"
+close_tab = "prefix+&"
 next_tab = "prefix+n"
 previous_tab = "prefix+shift+n"
 move_tab_previous = ""
@@ -87,7 +86,7 @@ swap_pane_right = "prefix+shift+l"
 # Escape cancels Herdr's prefix mode; use [ to enter its vi-style copy mode.
 copy_mode = "prefix+["
 edit_scrollback = "prefix+e"
-remote_image_paste = "ctrl+v"
+remote_image_paste = "prefix+v"
 
 # Workspace selector (navigate mode; no prefix)
 navigate_workspace_down = "j"
@@ -97,30 +96,18 @@ navigate_pane_down = "ctrl+j"
 navigate_pane_up = "ctrl+k"
 navigate_pane_right = "ctrl+l"
 
-# Legacy indexed shortcuts (unbound by default).
-# Prefer switch_tab, switch_workspace, and focus_agent above.
-[keys.indexed]
-tabs = ""
-workspaces = ""
-agents = ""
-
 [ui]
-# prompt_new_tab_name = false
-# tab_bar_position = "bottom"
-# pane_borders = "auto"
-# pane_outer_borders = false
-# pane_gaps = false
-# pane_scrollbars = false
-# sidebar_start_collapsed = true
-# sidebar_collapsed_mode = "hidden"
-# tab_bar_right = [
-#   { type = "hostname" },
-#   { type = "datetime", format = "%H:%M %d-%b-%y" },
-# ]
+mouse_capture = false
+pane_scrollbars = false
+prompt_new_workspace_name = true
+sidebar_collapsed_mode = "hidden"
+sidebar_max_width = 46
+sidebar_width = 36
 status_indicators = "symbols"
-#
-# [ui.sound]
-# enabled = false
-#
+tab_bar_right = [ { type = "datetime", format = "%H:%M %d-%b-%y" } ]
+
+[ui.sound]
+enabled = false
+
 [ui.toast]
 delivery = "herdr"
