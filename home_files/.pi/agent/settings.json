@@ -1,6 +1,7 @@
 {
   "lastChangelogVersion": "1.0.0",
   "theme": "dark",
+  "tuiMode": "regular",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-6-astra",
   "packages": [],
