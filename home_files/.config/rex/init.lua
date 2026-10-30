@@ -30,9 +30,9 @@ rex.bind("ctrl+[", "com.superlogical.terminal.write", {
 rex.bind("ctrl+a>ctrl+a", "pane.send_key", { key = "ctrl+a" })
 
 -- General.
-rex.bind("ctrl+a>space", "client.palette.toggle") -- ? (command palette)
+rex.bind("ctrl+a>space", "client.palette.toggle")
 rex.bind("ctrl+a>,", "client.settings")
-rex.bind("ctrl+a>shift+,", "client.config.reload") -- <
+rex.bind("ctrl+a>shift+,", "client.config.reload")
 rex.bind("ctrl+a>b", "client.sidebar.toggle")
 rex.bind("ctrl+a>.", "client.sidebar.activity.toggle")
 
@@ -53,8 +53,8 @@ for index = 1, 9 do
 end
 
 -- Panes.
-rex.bind("ctrl+a>shift+5", "pane.split", { direction = "right" }) -- %
-rex.bind("ctrl+a>shift+'", "pane.split", { direction = "down" }) -- double quote
+rex.bind("ctrl+a>shift+5", "pane.split", { direction = "right" })
+rex.bind("ctrl+a>shift+'", "pane.split", { direction = "down" })
 rex.bind("ctrl+a>x", "pane.close")
 rex.bind("ctrl+a>z", "pane.zoom")
 for key, direction in pairs({ h = "left", j = "down", k = "up", l = "right" }) do
