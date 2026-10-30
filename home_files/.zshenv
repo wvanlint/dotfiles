@@ -27,6 +27,10 @@ elif command -v brew >/dev/null 2>&1 &&
 fi
 unset rustup_prefix
 
+if [ -n "$REX_BIN_DIR" ]; then
+  path=("$REX_BIN_DIR" $path)
+fi
+
 # A local .zshenv outside of version control.
 if [ -f "$HOME/.zshenv.local" ]; then
   . "$HOME/.zshenv.local"
