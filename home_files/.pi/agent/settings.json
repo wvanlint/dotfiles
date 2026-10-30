@@ -1,7 +1,8 @@
 {
-  "lastChangelogVersion": "1.0.0",
+  "lastChangelogVersion": "1.4.0",
   "theme": "dark",
   "tuiMode": "regular",
+  "showHardwareCursor": true,
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-6-astra",
   "packages": [],
